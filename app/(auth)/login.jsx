@@ -1,127 +1,67 @@
 import { useState } from "react";
-import {View,Text,TextInput,TouchableOpacity,StyleSheet,ScrollView,Platform,StatusBar,Alert} from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { doc,getDoc } from "firebase/firestore";
-import { DB } from '../../firebaseConfig';
+import {View,Text,TextInput,TouchableOpacity,StyleSheet,ScrollView,Platform,StatusBar,Alert} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DB } from "../../firebaseConfig";
 import { router } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import { sendOTP } from "../../services/twilioService"
-import { Feather } from "@expo/vector-icons";
-
-// ✅ Iraq phone validation and normalization
-const normalizeIraqPhone = (input) => {
-  let phone = input.replace(/\D/g, "");
-
-  if (phone.startsWith("07")) phone = phone.slice(1);
-  if (!phone.startsWith("7")) throw new Error("رقم الهاتف يجب أن يبدأ بـ 07 أو 7");
-
-  return `+964${phone}`;
-};
+import { Ionicons,MaterialIcons } from "@expo/vector-icons";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!phone) {
-      Alert.alert("خطأ", "الرجاء إدخال رقم الهاتف");
-      return;
-    }
-
-    let normalizedPhone;
-    try {
-      normalizedPhone = normalizeIraqPhone(phone.trim());
-    } catch (err) {
-      Alert.alert("رقم غير صحيح", err.message);
+  //Login function
+  const handleLogin = async () => {
+    if (!phone || !password.trim()) {
+      Alert.alert("خطأ", "يرجى إدخال رقم الدخول وكلمة المرور");
       return;
     }
 
     try {
       setLoading(true);
 
-      const userRef = doc(DB, "users", normalizedPhone);
-      const userSnap = await getDoc(userRef);
+      // 🔹 1. Fetch admin by username (docId = username)
+      const driverRef = doc(DB, "drivers", phone);
+      const driverSnap = await getDoc(driverRef);
 
-      if (!userSnap.exists()) {
-        Alert.alert(
-          "الحساب غير موجود",
-          "لا يوجد حساب مرتبط بهذا الرقم.قم بإنشاء حساب جديد",
-        )
+      if (!driverSnap.exists()) {
+        Alert.alert("فشل الدخول", "اسم المستخدم غير موجود");
         return;
       }
 
-      // 🔥 APPLE REVIEW BYPASS
-      if (normalizedPhone === "+9647000000001") {
-        await AsyncStorage.setItem("safeTransDriver", normalizedPhone);
-        router.replace("/(main)/(tabs)/home");
+      const driverData = driverSnap.data();
+
+      if (driverData.account_banned === true) {
+        Alert.alert("الحساب موقوف", "تم إيقاف هذا الحساب، يرجى التواصل مع الإدارة");
         return;
       }
-      
-      let response = await sendOTP(normalizedPhone, "whatsapp");
 
-      // fallback to SMS if WhatsApp fails
-      if (!response.success && response.error?.includes("whatsapp")) {
-        response = await sendOTP(normalizedPhone, "sms");
+      // 🔹 2. Compare password
+      if (driverData.password !== password) {
+        Alert.alert("فشل الدخول", "كلمة المرور غير صحيحة");
+        return;
       }
 
-      if (response.success) {
-        router.push({
-          pathname: "/verify-otp",
-          params: { 
-            phone: normalizedPhone, 
-            isSignup: false           
-          },
-        });
-      } else {
-        Alert.alert("فشل الإرسال", response.error || "حدث خطأ أثناء الإرسال");
-      }
+      // 🔹 3. Save common session data
+      const sessionData = [
+        ["SAFE_DRIVER_USER", phone],
+        ["SAFE_DRIVER_NAME", driverData.name],
+      ];
+
+      await AsyncStorage.multiSet(sessionData);
+
+      router.replace("/(main)/(tabs)/home");
 
     } catch (error) {
-      console.log("Send OTP error:", error);
-      Alert.alert("خطأ", "حدث خطأ أثناء إرسال رمز التحقق");
-    } finally{
-      setLoading(false);
-    }
-  }
-
-  //Test Login with +216 code number
-  /*
-  const handleSubmit = async () => { 
-    if (!phone) { 
-      Alert.alert("خطأ", "الرجاء إدخال رقم الهاتف"); 
-      return; 
-    } 
-
-    const completePhone = `+216${phone}`
-
-    try {
-      setLoading(true);
-      
-      let response = await sendOTP(completePhone, "whatsapp");
-
-      console.log("response",response)
-
-      // fallback to SMS if WhatsApp fails
-      if (!response.success && response?.error?.includes("whatsapp")) {
-        response = await sendOTP(completePhone, "sms");
-      }
-
-      if (response.success) {
-        router.push({
-          pathname: "/verify-otp",
-          params: { phone:completePhone, isSignup: false },
-        });
-      } else {
-        Alert.alert("فشل الإرسال", response.error || "حدث خطأ أثناء الإرسال");
-      }
-    } catch (error) {
-      console.log("Send OTP error:", error);
-      Alert.alert("خطأ", "حدث خطأ أثناء إرسال رمز التحقق");
+      console.log("Login error:", error);
+      Alert.alert("خطأ", "حدث خطأ أثناء تسجيل الدخول");
     } finally {
       setLoading(false);
     }
   };
-  */
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -130,61 +70,64 @@ const Login = () => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.replace('/welcome')}
-            style={styles.backBtn}
-          >
-            <Feather name="arrow-left" size={24} color="#007AFF" />
-          </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoBox}>
+            <Ionicons name="car-sport" size={48} color="#fff" />
+          </View>
+          <Text style={styles.title}>تطبيق السائق</Text>
+          <Text style={styles.subtitle}>إدارة رحلاتك اليومية بسهولة</Text>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
-          <Text style={styles.title}>تسجيل الدخول</Text>
-          <Text style={styles.subtitle}>أدخل رقم هاتفك لتسجيل الدخول</Text>
-
-          {/* Phone Field */}
+          {/* Username */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>رقم الهاتف</Text>
+            <Text style={styles.label}>رقم الدخول</Text>
             <View style={styles.inputWrapper}>
-              <Feather name="phone" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { textAlign: "right", direction: "ltr" }]}
-                placeholder="7XX XXX XXXX"
+                style={styles.input}
+                placeholder="XXXXXXXXXX"
                 placeholderTextColor="#aaa"
-                keyboardType="phone-pad"
                 value={phone}
                 onChangeText={setPhone}
+                textAlign="right"
               />
             </View>
-            <Text style={styles.helperText}>سنرسل رمز التحقق إلى هذا الرقم</Text>
+          </View>
+
+          {/* Password */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>كلمة المرور</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#aaa"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                textAlign="right"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <MaterialIcons 
+                  name={showPassword ? "visibility" : "visibility-off"} 
+                  size={24} 
+                  color="#777" 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Submit */}
-          <TouchableOpacity 
-            style={styles.primaryButton} 
-            onPress={handleSubmit}
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleLogin}
             disabled={loading}
           >
             <Text style={styles.primaryButtonText}>
-              {loading ? "جاري الإرسال..." : "التالي"}
+              {loading ? "جاري التحقق..." : "دخول"}
             </Text>
           </TouchableOpacity>
-
-          {/* Create account link */}
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>
-              ليس لديك حساب؟{" "}
-              <Text
-                style={styles.signupLink}
-                onPress={() => router.push("/signup")}
-              >
-                إنشاء حساب
-              </Text>
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -200,16 +143,20 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 20,
   },
-  header: {
-    marginBottom: 20,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
+  logoContainer: {
     alignItems: "center",
+  },
+  logoBox: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    elevation: 6,
   },
   content: {
     flex: 1,
@@ -218,18 +165,18 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: "NotoArabicBold",
     color: "#111",
-    marginBottom: 8,
-    textAlign: "right",
+    marginBottom: 3,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     fontFamily: "NotoArabicRegular",
     color: "#6b7280",
-    marginBottom: 32,
-    textAlign: "right",
+    marginBottom: 10,
+    textAlign: "center",
   },
   fieldContainer: {
-    marginBottom: 24,
+    marginBottom: 15,
   },
   label: {
     fontFamily: "NotoArabicBold",
@@ -253,42 +200,23 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    height: 50,
+    fontSize: 14,
     fontFamily: "NotoArabicRegular",
-    color: "#111",
-  },
-  helperText: {
-    fontSize: 13,
-    fontFamily: "NotoArabicRegular",
-    color: "#6b7280",
-    marginTop: 4,
-    textAlign: "right",
+    color: "#000",
   },
   primaryButton: {
-    height: 54,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 7,
   },
   primaryButtonText: {
     fontFamily: "NotoArabicBold",
     color: "#fff",
     fontSize: 18,
-  },
-  signupContainer: {
-    marginTop: 24,
-    alignItems: "center",
-  },
-  signupText: {
-    fontFamily: "NotoArabicRegular",
-    fontSize: 15,
-    color: "#555",
-  },
-  signupLink: {
-    fontFamily: "NotoArabicBold",
-    color: "#007AFF",
   },
 });
 

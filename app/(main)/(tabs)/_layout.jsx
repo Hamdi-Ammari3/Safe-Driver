@@ -46,16 +46,7 @@ export default function TabsLayout() {
         options={{
           headerShown:false,
           title: 'حسابي',
-          tabBarIcon:({color}) => (<Ionicons name="person" size={20} color={color}/>)
-        }}
-      />
-
-      <Tabs.Screen 
-        name='addLine' 
-        options={{
-          headerShown:false,
-          title: 'إضافة خط',
-          tabBarIcon:({color}) => (<Ionicons name="person-add" size={20} color={color}/>)
+          tabBarIcon:({color}) => (<Ionicons name="person" size={22} color={color}/>)
         }}
       />
 
@@ -64,7 +55,7 @@ export default function TabsLayout() {
         options={{
           headerShown:false,
           title: 'الرئيسية',
-          tabBarIcon:({color}) => (<Ionicons name='home'size={26} color={color} />)
+          tabBarIcon:({color}) => (<Ionicons name='home'size={24} color={color} />)
         }}
       />
     </Tabs>

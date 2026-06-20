@@ -1,70 +1,38 @@
 import { useEffect, useState } from "react";
-import {View,Text,StyleSheet,TouchableOpacity,Image,Linking,Alert,Platform} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"
+import {View,Text,StyleSheet,TouchableOpacity,ScrollView,Alert} from "react-native";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { doc, deleteDoc, getDoc } from "firebase/firestore";
-import { DB } from "../../../firebaseConfig";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Profile() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
 
-  // 🔹 Load user data from Firestore using phone (saved in AsyncStorage)
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const phone = await AsyncStorage.getItem("safeTransDriver");
-        if (!phone) return;
-
-        const userSnap = await getDoc(doc(DB, "users", phone));
-        if (userSnap.exists()) setUser(userSnap.data());
-      } catch (err) {
-        console.log("Error loading user:", err);
-      }
+    const loadProfile = async () => {
+      const name = await AsyncStorage.getItem("SAFE_DRIVER_NAME");
+      setUserName(name || "السائق");
     };
-    loadUser();
+    loadProfile();
   }, []);
 
-  // 🔹 Logout logic
   const handleLogout = async () => {
-    Alert.alert("تأكيد", "هل ترغب بتسجيل الخروج؟", [
-      { text: "إلغاء", style: "cancel" },
-      {
-        text: "تأكيد",
-        style: "destructive",
-        onPress: async () => {
-          await AsyncStorage.removeItem("safeTransDriver");
-          router.replace("/(auth)/login");
-        },
-      },
-    ]);
-  };
-
-  // 🔹 Delete account logic
-  const handleDeleteAccount = async () => {
     Alert.alert(
-      "تأكيد الحذف",
-      "سيتم حذف حسابك وجميع بياناتك نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+      "تسجيل الخروج",
+      "هل أنت متأكد من تسجيل الخروج؟",
       [
         { text: "إلغاء", style: "cancel" },
         {
-          text: "حذف",
+          text: "خروج",
           style: "destructive",
           onPress: async () => {
-            try {
-              const phone = await AsyncStorage.getItem("safeTransDriver");
-              if (phone) {
-                await deleteDoc(doc(DB, "users", phone));
-                await AsyncStorage.removeItem("safeTransDriver");
-                Alert.alert("تم الحذف", "تم حذف الحساب بنجاح");
-                router.replace("/(auth)/login");
-              }
-            } catch (err) {
-              console.log("Error deleting account:", err);
-              Alert.alert("خطأ", "حدث خطأ أثناء حذف الحساب");
-            }
+            await AsyncStorage.multiRemove([
+              "SAFE_DRIVER_USER",
+              "SAFE_DRIVER_NAME"
+            ]);
+
+            router.replace("/(auth)/login");
           },
         },
       ]
@@ -74,7 +42,7 @@ export default function Profile() {
   const menuItems = [
     {
       label: "سياسة الخصوصية",
-      icon: "shield-outline",
+      icon: "shield-checkmark-outline",
       onPress: () => Linking.openURL("https://sayartech.com/privacy-policy"),
     },
     {
@@ -86,66 +54,54 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.card}>
-        <View style={styles.userBox}>
-          <View style={styles.avatarBox}>
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            ) : (
-              <Ionicons name="person-circle-outline" size={80} color="#ccc" />
-            )}
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.username || "مستخدم"}</Text>
-            <Text style={styles.userPhone}>{user?.phone || "7XX XXX XXXX"}</Text>
-          </View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>الملف الشخصي</Text>
+          <Text style={styles.headerSubtitle}>إدارة حسابك</Text>
         </View>
-      </View>
 
-      {/* Menu items */}
-      <View style={styles.card}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={item.onPress}
-            style={[
-              styles.menuItem,
-              index !== menuItems.length - 1 && styles.menuDivider,
-            ]}
-          >
-            <Ionicons name="chevron-back" size={20} color="#999" />
-            <View style={styles.menuLabelBox}>
-              <Text style={styles.menuLabel}>{item.label}</Text>
-              <Ionicons name={item.icon} size={20} color="#666" />
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatar_name_box}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={40} color="#fff" />
             </View>
+            <View style={styles.userName_box}>
+              <Text style={styles.userName}>{userName}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Menu */}
+        <View style={styles.menuWrapper}>
+          {menuItems.map((item) => (
+            <TouchableOpacity key={item.label} style={styles.menuItem} onPress={item.onPress}>
+              <Ionicons
+                name="chevron-back"
+                size={20}
+                color="#000"
+              />
+              <Text style={styles.menuText}>{item.label}</Text>
+              <View style={styles.menuIcon}>
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color="#2563eb"
+                />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Logout */}
+        <View style={styles.logoutWrapper}>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Feather name="log-out" size={18} color="#dc2626" />
+            <Text style={styles.logoutText}>تسجيل الخروج</Text>
           </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Logout */}
-      <TouchableOpacity
-        style={[styles.actionButton, styles.logoutButton]}
-        onPress={handleLogout}
-      >
-        <Ionicons name="chevron-back" size={20} color="#000" />
-        <View style={styles.actionLabelBox}>
-          <Text style={styles.actionLabel}>تسجيل الخروج</Text>
-          <Ionicons name="log-out-outline" size={20} color="#000" />
         </View>
-      </TouchableOpacity>
-
-      {/* Delete account */}
-      <TouchableOpacity
-        style={[styles.actionButton, styles.deleteButton]}
-        //onPress={handleDeleteAccount}
-      >
-        <Ionicons name="chevron-back" size={20} color="#fff" />
-        <View style={styles.actionLabelBox}>
-          <Text style={[styles.actionLabel, { color: "#fff" }]}>حذف الحساب</Text>
-          <Ionicons name="trash-outline" size={20} color="#fff" />
-        </View>
-      </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -153,98 +109,197 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f8f9fa",
+  },
+  header: {
+    padding: 20,
+    paddingBottom: 60,
+    backgroundColor:'#2563eb'
+  },
+  headerTitle: {
+    fontSize: 22,
+    color: "#fff",
+    fontFamily: "NotoArabicBold",
+    textAlign: "right",
+  },
+  headerSubtitle: {
+    color: "#e5e7eb",
+    fontSize: 14,
+    fontFamily: "NotoArabicRegular",
+    textAlign: "right",
+  },
+  profileCard: {
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    marginHorizontal: 20,
+    marginTop: -40,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical:30,
+    elevation: 4,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  userBox: {
-    flexDirection: "row-reverse",
+  avatar_name_box:{
+    flexDirection:'row-reverse',
     alignItems: "center",
-    gap: 16,
-  },
-  avatarBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "flex-start",
+    gap:10,
   },
   avatar: {
-    width: "100%",
-    height: "100%",
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-end",
   },
-  userInfo: {
-    flex: 1,
-    alignItems: "flex-end",
-    justifyContent:'center',
+  userName_box:{
+    alignItems: "center",
+    justifyContent: "center", 
   },
   userName: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: "NotoArabicBold",
-    color: "#000",
+    color: "#111",
+    textAlign: "right",
   },
-  userPhone: {
-    fontSize: 15,
-    color: "#666",
+  roleText: {
+    fontSize: 14,
+    color: "#6b7280",
+    textAlign: "right",
+  },
+  infoRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    marginTop: 3,
+    gap: 6,
+  },
+  infoText: {
+    color: "#6b7280",
+    fontSize: 14,
     fontFamily: "NotoArabicRegular",
   },
-  menuItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  menuDivider: {
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-  },
-  menuLabelBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  menuLabel: {
-    fontSize: 16,
-    color: "#000",
-    fontFamily: "NotoArabicRegular",
-  },
-  actionButton: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 13,
+  menuWrapper: {
+    marginTop: 20,
     paddingHorizontal: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  logoutButton: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  deleteButton: {
-    backgroundColor: "#DC2525",
-  },
-  actionLabelBox: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 10,
   },
-  actionLabel: {
-    fontSize: 16,
+  menuItem: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    elevation: 2,
+  },
+  menuText: {
+    flex: 1,
+    textAlign: "right",
     fontFamily: "NotoArabicRegular",
     color: "#000",
+    fontSize: 15,
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
+  logoutWrapper: {
+    padding: 20,
+    marginTop: 10,
+  },
+  logoutBtn: {
+    borderWidth: 1,
+    borderColor: "#dc2626",
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  logoutText: {
+    color: "#dc2626",
+    fontFamily: "NotoArabicBold",
+    fontSize: 16,
   },
 });
+
+/*
+ //Fetch driver doc
+  const fetchDriverProfile = async () => {
+    try {
+      setInitializing(true);
+
+      const driverPhone = await AsyncStorage.getItem("safeTransDriver");
+      if (!driverPhone) {
+        setDriverProfile(null);
+        return;
+      }
+
+      const driverRef = doc(DB, "drivers", driverPhone);
+      const driverSnap = await getDoc(driverRef);
+
+      if (driverSnap.exists()) {
+        setDriverProfile({ id: driverSnap.id, ...driverSnap.data() });
+      } else {
+        setDriverProfile(null);
+      }
+    } catch (error) {
+      console.log("❌ Error fetching driver profile:", error);
+    } finally {
+      setInitializing(false);
+    }
+  }
+
+  //Check notification token update
+  const updateUserNotificationToken = async () => {
+    try {
+      //Get user ID
+      const userId = await AsyncStorage.getItem("safeTransDriver");
+      if (!userId) return;
+
+      const userRef = doc(DB, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) return;
+
+      const savedTokenInDB = userSnap.data().notification_token || null;
+
+      //Ask Expo for a new token
+      const newTokenObj = await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig.extra.eas.projectId,
+      });
+
+      const newToken = newTokenObj.data;
+
+      //Handle denied permission
+      if (!newToken) {
+        return;
+      }
+
+      //If Firestore token is SAME → no update needed
+      if (newToken === savedTokenInDB) {
+        return;
+      }
+
+      //Update Firestore token
+      await updateDoc(userRef, {
+        notification_token: newToken
+      });
+
+      //Update local storage copy (optional)
+      await AsyncStorage.setItem("expoPushToken", newToken);
+
+    } catch (err) {
+      console.log("❌ Error refreshing notification token:", err);
+    }
+  }
+
+  //Run notification update check each time the home page loads
+  useEffect(() => {
+    updateUserNotificationToken();
+  }, [])
+*/

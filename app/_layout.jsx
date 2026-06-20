@@ -3,9 +3,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFonts } from 'expo-font';
+import { I18nManager } from 'react-native';
+
+if (I18nManager.isRTL) {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+}
 
 export default function RootLayout() {
-
   const colorScheme = useColorScheme()
 
   const [loaded] = useFonts({
@@ -24,7 +29,6 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(setup)" />
         <Stack.Screen name="(main)" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

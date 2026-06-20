@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "765625725930",
+    "project_id": "sayartech-871ac",
+    "storage_bucket": "sayartech-871ac.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:765625725930:android:ff6d540f0bcdd4e2c83893",
+        "android_client_info": {
+          "package_name": "com.ayaddaya.safedriver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACNhPzptGttb48EzP4aSmDiMh2eo4ah-k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

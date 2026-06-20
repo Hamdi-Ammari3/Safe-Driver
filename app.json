@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Safe Driver",
+    "slug": "safe-driver",
+    "version": "1.0.2",
+    "icon": "./assets/images/icon.png",
+    "scheme": "safedriver",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "newArchEnabled": false,
+    "ios": {
+      "bundleIdentifier": "com.ayaddaya.safedriver",
+      "supportsTablet": false,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow Safe to use your location for navigation and trip tracking.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Safe to use your location to improve your navigation experience.",
+        "UIBackgroundModes": ["fetch","fetch"],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyDFykWBtWSbKHvxgyTxntrGadHSk2dzjts"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ayaddaya.safedriver",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDFykWBtWSbKHvxgyTxntrGadHSk2dzjts"
+        }
+      }
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7979cd87-5be6-4036-9f51-45369cdc27bf"
+      }
+    }
+  }
+}
